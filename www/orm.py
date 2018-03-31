@@ -77,7 +77,7 @@ class ModelMetaclass(type):
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
         tableName = attrs.get('__table__', None) or name
-        logging.info('found model: %s (table: %s)' % s(name, tableName))
+        logging.info('found model: %s (table: %s)' % (name, tableName))
         mappings = dict()
         fields = []
         primaryKey = None
@@ -139,7 +139,7 @@ class Model(dict, metaclass=ModelMetaclass):
             field = self.__mappings__[key]
             if field.default is not None:
                 value = field.default() if callable(field.default) else field.default
-                logging.debug('using default value for %s: %s', % (key, str(value)))
+                logging.debug('using default value for %s: %s' % (key, str(value)))
                 setattr(self, key, value)
         return value
 
