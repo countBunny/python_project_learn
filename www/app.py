@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 import orm
 from coroweb import add_routes, add_static
 
+import config
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -113,8 +114,8 @@ def index(request):
     return web.Response(body=b'<h1>Awesome</h>')
 
 
-async init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='password', db='awesome')
+async def init(loop):
+    await orm.create_pool(loop=loop, host=config.configs['db']['host'], port=3306, user='root', password='password', db='awesome')
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])

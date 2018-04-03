@@ -34,7 +34,7 @@ def post(path):
         wrapper.__method__ = 'POST'
         wrapper.__route__ = path
         return wrapper
-    return
+    return decorator
 
 
 def get_required_kw_args(fn):
@@ -92,24 +92,25 @@ class RequestHandler(object):
         self._has_var_kw_arg = has_var_kw_args(fn)
         self._has_named_kw_args = has_named_kw_args(fn)
         self._named_kw_args = get_named_kw_args(fn)
-        self._reqired_kw_args = get_required_kw_args(fn)
+        self._required_kw_args = get_required_kw_args(fn)
 
     async def __call__(self, request):
         kw = None
-        if self._has_var_kw_arg or self._has_named_kw_args or self._reqired_kw_args:
+        if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
             if request.method == 'POST':
-                return web.HTTPBadRequest('Missing Content-Type.')
-            ct = request.content_type.lower()
-            if ct.startswith('application/json'):
-                params = await request.json()
-                if not isinstance(params, dict):
-                    return web.HTTPBadRequest('JSON body must be object.')
-                kw = params
-            elif ct.startswith('application/x-www-form-urlencoded') or ct.startswith('multipart/form-data'):
-                params = await request.post()
-                kw = dict(**params)
-            else:
-                return web.HTTPBadRequest('Unsupported Content-Type:%s' % request.content_type)
+                if not request.content_type:
+                    return web.HTTPBadRequest('Missing Content-Type.')
+                ct = request.content_type.lower()
+                if ct.startswith('application/json'):
+                    params = await request.json()
+                    if not isinstance(params, dict):
+                        return web.HTTPBadRequest('JSON body must be object.')
+                    kw = params
+                elif ct.startswith('application/x-www-form-urlencoded') or ct.startswith('multipart/form-data'):
+                    params = await request.post()
+                    kw = dict(**params)
+                else:
+                    return web.HTTPBadRequest('Unsupported Content-Type:%s' % request.content_type)
             if request.method == 'GET':
                 qs = request.query_string
                 if qs:
@@ -129,8 +130,8 @@ class RequestHandler(object):
             for k,v in request.match_info.items():
                 if k in kw:
                     logging.warning('Duplicate arg name in named arg and kw args: %s' % k)
-                    kw[k] = v
-            if self._has_request_arg:
+                kw[k] = v
+        if self._has_request_arg:
             kw['request'] = request
         # check required kw:
         if self._required_kw_args:
