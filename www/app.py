@@ -17,6 +17,8 @@ from coroweb import add_routes, add_static
 
 import config
 
+from handlers import cookie2user, COOKIE_NAME
+
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
     options = dict(
@@ -97,6 +99,21 @@ async def response_factory(app, handler):
         return resp
     return response
 
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME)
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+            return web.HTTPFound('/signin')
+        return (await handler(request))
+    return auth
+
 def datetime_filter(t):
     delta = int(time.time() - t)
     if delta < 60:
@@ -117,7 +134,7 @@ def index(request):
 async def init(loop):
     await orm.create_pool(loop=loop, host=config.configs['db']['host'], port=3306, user='root', password='password', db='awesome')
     app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+        logger_factory, response_factory, auth_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
