@@ -21,7 +21,7 @@ def user2cookie(user, max_age):
     L = [user.id, expires, hashlib.sha1(s.encode('utf-8')).hexdigest()]
     return '-'.join(L)
 
-async cookie2user(cookie_str):
+async def cookie2user(cookie_str):
     if not cookie_str:
         return None
     try:
