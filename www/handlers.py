@@ -3,7 +3,7 @@
 import re, time, json, logging, hashlib, base64, asyncio
 
 from coroweb import get, post
-from apis import APIValueError, APIResourceNotFoundError, APIPermissionError
+from apis import APIValueError, APIResourceNotFoundError, APIPermissionError, Page
 
 from models import User, Comment, Blog, next_id
 
@@ -90,6 +90,23 @@ async def api_get_users():
     for u in users:
         u.passwd = '*******'
     return dict(users=users)
+
+@get('/api/blogs')
+async def api_blogs(*, page='1'):
+    page_index = get_page_index(page)
+    num = await Blog.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num==0:
+        return dict(page=p, blogs=())
+    blogs = await Blog.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, blogs=blogs)
+
+@get('/manage/blogs')
+def manage_blogs(*, page='1'):
+    return {
+        '__template__': 'manage_blogs.html',
+        'page_index': get_page_index(page)
+    }
 
 @get('/blog/{id}')
 async def get_blog(id):
