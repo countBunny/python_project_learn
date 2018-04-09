@@ -68,7 +68,7 @@ def create_args_string(num):
     L = []
     for n in range(num):
         L.append('?')
-        return ', '.join(L)
+    return ', '.join(L)
 
 
 class ModelMetaclass(type):
@@ -100,14 +100,15 @@ class ModelMetaclass(type):
             attrs.pop(k)
         # 筛出来的列名
         escaped_fields = list(map(lambda f: '`%s`' % f, fields))
-        attrs['__mappings___'] = mappings  # 保存属性和列的映射关系
+        logging.info('escaped_fields = '+ str(escaped_fields))
+        attrs['__mappings__'] = mappings  # 保存属性和列的映射关系
         attrs['__table__'] = tableName
         attrs['__primary_key__'] = primaryKey  # 主键属性名
         attrs['__fields__'] = fields  # 除主键外的属性名
         attrs['__select__'] = 'select `%s`, %s from `%s`' % (
             primaryKey, ', '.join(escaped_fields), tableName)
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values(%s)' % (
-            tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
+        logging.info('__insert__ = '+ str(attrs['__insert__']))
         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(
             map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (
@@ -191,7 +192,7 @@ class Model(dict, metaclass=ModelMetaclass):
         return cls(**rs[0])
 
     async def save(self):
-        args = list(map(self.getValueOrDefault, self.__field__))
+        args = list(map(self.getValueOrDefault, self.__fields__))
         args.append(self.getValueOrDefault(self.__primary_key__))
         rows = await execute(self.__insert__, args)
         if rows!= 1:
